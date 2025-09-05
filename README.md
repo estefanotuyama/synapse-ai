@@ -13,7 +13,7 @@ This project aims to build a complete system where users can define custom AI "a
 * **Backend:** Go
 * **Frontend:** React
 * **Vector Database:** Weaviate
-* **Metadata Database:** PostgreSQL
+* **Persistence Database:** MongoDB
 
 ## Project Status
 
@@ -21,10 +21,10 @@ This project is in the **initial setup phase**. The foundational structure for t
 
 ### High-Level Roadmap
 
--   [ ] Set up Go backend server skeleton & API structure.
--   [ ] Implement document ingestion pipeline (parsing, chunking, embedding).
--   [ ] Develop the core RAG chat endpoint.
--   [ ] Integrate PostgreSQL for metadata and Weaviate for vector storage.
--   [ ] Build the React frontend for agent and chat management.
+- Set up Go backend server skeleton & API structure.
+- Implement document ingestion pipeline (parsing, chunking, embedding).
+- Develop the core RAG chat endpoint.
+- Integrate MongoDB for persistence and Weaviate for vector storage.
+- Build the React frontend for agent and chat management.
 
 ---

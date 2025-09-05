@@ -14,7 +14,7 @@ run:
 	go run ./cmd/server
 
 # Run tests
-runTest:
+test:
 	@echo "Running tests..."
 	go test ./... -v
 
