@@ -4,6 +4,7 @@ go 1.24.6
 
 require (
 	github.com/go-chi/chi/v5 v5.2.3
+	github.com/weaviate/weaviate v1.31.5
 	github.com/weaviate/weaviate-go-client/v5 v5.4.1
 )
 
@@ -26,7 +27,6 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/weaviate/weaviate v1.31.5 // indirect
 	go.mongodb.org/mongo-driver v1.14.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect

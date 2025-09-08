@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"synapse-ai/internal"
+	"synapse-ai/internal/server"
 )
 
 func main() {
