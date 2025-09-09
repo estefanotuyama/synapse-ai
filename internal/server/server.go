@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"reflect"
 
 	"github.com/go-chi/chi/v5"
 	"synapse-ai/internal/rag"
@@ -17,7 +16,12 @@ type Server struct {
 
 type LLMRequest struct {
 	Prompt     string             `json:"prompt"`
-	MsgHistory []*rag.ChatMessage `json:"MsgHistory"`
+	MsgHistory []*rag.ChatMessage `json:"msgHistory"`
+}
+
+type LLMResponse struct {
+	Response   string             `json:"response"`
+	MsgHistory []*rag.ChatMessage `json:"msgHistory"`
 }
 
 func (s *Server) routes() http.Handler {
@@ -51,15 +55,24 @@ func (s *Server) llmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(req.Prompt)
+	userPrompt := req.Prompt
+	history := req.MsgHistory
 
-	res, _, err := rag.CallWithContext(req.Prompt, nil)
+	res, history, err := rag.CallWithContext(userPrompt, history)
 
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("LLM call failed: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
-	fmt.Printf("Type of res: %v", reflect.TypeOf(res)) //*genai.GenerateContentResponse
+	jsonResponse := LLMResponse{
+		Response:   res,
+		MsgHistory: history,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(jsonResponse)
 }
 
 func (s Server) Run() error {

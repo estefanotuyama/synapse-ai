@@ -3,9 +3,11 @@ package rag
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/weaviate/weaviate-go-client/v5/weaviate"
+	"github.com/weaviate/weaviate-go-client/v5/weaviate/auth"
 	"github.com/weaviate/weaviate/entities/models"
 )
 
@@ -69,7 +71,7 @@ func (c *Collection) AddDocuments(client *weaviate.Client) error {
 	var err error
 	var batchRes []models.ObjectsGetResponse
 
-	for i := 0; i < MAX_RETRIES; i++ {
+	for i := range MAX_RETRIES {
 		batchRes, err = batcher.Do(ctx)
 		if err == nil {
 			break
@@ -102,11 +104,37 @@ func (c *Collection) AddDocuments(client *weaviate.Client) error {
 	return nil
 }
 
-func (c *Collection) DeleteCollection(client *weaviate.Client) error {
+func (c *Collection) Delete(client *weaviate.Client) error {
 	ctx := context.Background()
 
 	if err := client.Schema().ClassDeleter().WithClassName(c.collectionName).Do(ctx); err != nil {
 		return fmt.Errorf("Error while deleting collection: %v", err)
 	}
 	return nil
+}
+
+func ConnectToVectorDB() (*weaviate.Client, error) {
+	cfg := weaviate.Config{
+		Host:   WEAVIATE_URL,
+		Scheme: "https",
+		Headers: map[string]string{
+			"X-HuggingFace-Api-Key": HUGGINGFACE_APIKEY,
+		},
+		AuthConfig: auth.ApiKey{Value: WEAVIATE_APIKEY},
+	}
+
+	client, err := weaviate.NewClient(cfg)
+
+	if err != nil {
+		log.Fatalf("Failed to connect to client: %v", err)
+	}
+
+	ready, err := client.Misc().ReadyChecker().Do(context.Background())
+
+	if err != nil {
+		panic(err)
+	}
+
+	log.Printf("%v", ready)
+	return client, nil
 }

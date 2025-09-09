@@ -6,7 +6,7 @@ import (
 
 func TestCollectionLifecycle(t *testing.T) {
 	t.Log("Connecting to Weaviate client...")
-	client, err := ConnectToClient()
+	client, err := ConnectToVectorDB()
 	if err != nil {
 		t.Fatalf("Failed to connect to Weaviate client: %v", err)
 	}
@@ -23,7 +23,7 @@ func TestCollectionLifecycle(t *testing.T) {
 
 	t.Cleanup(func() {
 		t.Log("Cleaning up: deleting collection...")
-		err := col.DeleteCollection(client)
+		err := col.Delete(client)
 		if err != nil {
 			t.Errorf("Failed to delete collection during cleanup: %v", err)
 		} else {
