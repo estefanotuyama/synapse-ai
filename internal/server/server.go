@@ -14,9 +14,10 @@ type Server struct {
 	addr string
 }
 
-type LLMRequest struct {
-	Prompt     string             `json:"prompt"`
-	MsgHistory []*rag.ChatMessage `json:"msgHistory"`
+type RAGRequest struct {
+	Prompt         string             `json:"prompt"`
+	MsgHistory     []*rag.ChatMessage `json:"msgHistory"`
+	CollectionName string             `json:"collectionName"`
 }
 
 type LLMResponse struct {
@@ -29,7 +30,7 @@ func (s *Server) routes() http.Handler {
 
 	r.Get("/", s.homeHandler)
 	r.Get("/healthCheck", s.healthHandler)
-	r.Post("/llm_call", s.llmHandler)
+	r.Post("/rag_call", s.ragHandler)
 
 	return r
 }
@@ -47,8 +48,8 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"status":"ok"}`)
 }
 
-func (s *Server) llmHandler(w http.ResponseWriter, r *http.Request) {
-	var req LLMRequest
+func (s *Server) ragHandler(w http.ResponseWriter, r *http.Request) {
+	var req RAGRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -57,14 +58,17 @@ func (s *Server) llmHandler(w http.ResponseWriter, r *http.Request) {
 
 	userPrompt := req.Prompt
 	history := req.MsgHistory
+	collectionName := req.CollectionName
 
-	res, history, err := rag.CallWithContext(userPrompt, history)
+	history, err := rag.CallRagSystem(userPrompt, history, collectionName)
 
 	if err != nil {
 		log.Printf("LLM call failed: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+
+	res := history[0].Content
 
 	jsonResponse := LLMResponse{
 		Response:   res,

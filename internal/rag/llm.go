@@ -13,29 +13,31 @@ type ChatMessage struct {
 }
 
 // calls the LLM and returns both the response and the entire chat history.
-func CallWithContext(prompt string, msgHistory []*ChatMessage) (string, []*ChatMessage, error) {
+func CallWithContext(prompt string, msgHistory []*ChatMessage) ([]*ChatMessage, error) {
 	ctx := context.Background()
 	client, err := connectToLlm()
 	if err != nil {
-		return "Error. Could not connect to LLM.", nil, err
+		return msgHistory, err
 	}
 
 	// add user message and convert to genai type for processing
 	msgHistory = append(msgHistory, &ChatMessage{Content: prompt, Role: "user"})
 	genaiHistory := toGenaiContent(msgHistory)
 
-	res, err := client.Models.GenerateContent(ctx, GEN_MODEL, genaiHistory, nil)
+	config := generateConfig()
+
+	res, err := client.Models.GenerateContent(ctx, GEN_MODEL, genaiHistory, config)
 	clear(genaiHistory)
 
 	if err != nil {
-		return "Error. Could not generate content.", nil, err
+		return msgHistory, err
 	}
 
 	textResponse := extractText(res)
 
 	fullHistory := append(msgHistory, &ChatMessage{Content: textResponse, Role: "model"})
 
-	return textResponse, fullHistory, nil
+	return fullHistory, nil
 }
 
 func connectToLlm() (*genai.Client, error) {
@@ -80,4 +82,18 @@ func toGenaiContent(msgHistory []*ChatMessage) []*genai.Content {
 		)
 	}
 	return genaiHistory
+}
+
+// general llm configuration and system prompt.
+func generateConfig() *genai.GenerateContentConfig {
+
+	temp := float32(0.5)
+	topP := float32(0.7)
+
+	return &genai.GenerateContentConfig{
+		Temperature: &temp,
+		TopP:        &topP,
+		//TopK: ,
+		SystemInstruction: genai.NewContentFromText(SYSTEM_PROMPT, genai.RoleUser),
+	}
 }

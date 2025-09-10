@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestChunkingSmall(t *testing.T) {
+func TestChunkingTxt(t *testing.T) {
 	file, err := os.ReadFile("testdata/ChunkingTest.txt")
 	if err != nil {
 		t.Fatalf("failed to read test file: %v", err)

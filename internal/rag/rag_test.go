@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestCollectionLifecycle(t *testing.T) {
+func TestRagSystem(t *testing.T) {
 	t.Log("Connecting to Weaviate client...")
 	client, err := ConnectToVectorDB()
 	if err != nil {
@@ -14,9 +14,9 @@ func TestCollectionLifecycle(t *testing.T) {
 
 	// define the collection
 	col := Collection{
-		collectionName: "TestLifecycleCollection",
+		collectionName: "SystemTest",
 		docs: []map[string]string{
-			{"content": "first chunk"},
+			{"content": "The secret keyword is 'SIC MUNDUS CREATUS EST'"},
 			{"content": "second chunk"},
 		},
 	}
@@ -31,7 +31,6 @@ func TestCollectionLifecycle(t *testing.T) {
 		}
 	})
 
-	// create collection test
 	t.Run("creates the collection", func(t *testing.T) {
 		err := col.Create(client)
 		if err != nil {
@@ -40,13 +39,34 @@ func TestCollectionLifecycle(t *testing.T) {
 		t.Log("Collection creation successful.")
 	})
 
-	// add documents test
 	t.Run("adds documents to the collection", func(t *testing.T) {
 		err := col.AddDocuments(client)
 		if err != nil {
 			t.Fatalf("Failed to add documents: %v", err)
 		}
-		t.Log("Successfully added documents.")
+		t.Log("Successfully added documents. Secret keyword is SIC MUNDUS CREATUS EST")
 	})
 
+	t.Run("tests Rag pipeline", func(t *testing.T) {
+		history, err := testRagPipeline(col.collectionName)
+
+		if err != nil {
+			t.Fatalf("Rag pipeline failed: %v", err)
+		}
+
+		if len(history) != 2 {
+			t.Fatalf("Rag system returned wrong message history length.")
+		}
+
+		t.Logf("Rag pipeline success. LLM Response to 'secret keyword':%v", history[len(history)-1].Content)
+	})
+}
+
+func testRagPipeline(collectionName string) ([]*ChatMessage, error) {
+	prompt := "What is the secret keyword? Only say the secret keyword."
+	msgHistory := []*ChatMessage{}
+
+	responseHistory, err := CallRagSystem(prompt, msgHistory, collectionName)
+
+	return responseHistory, err
 }
