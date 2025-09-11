@@ -12,9 +12,9 @@ func TestRagSystem(t *testing.T) {
 	}
 	t.Log("Weaviate client connection successful.")
 
-	// define the collection
-	col := Collection{
-		collectionName: "SystemTest",
+	// define the tenant
+	ten := AgentTenant{
+		name: "TenantTest",
 		docs: []map[string]string{
 			{"content": "The secret keyword is 'SIC MUNDUS CREATUS EST'"},
 			{"content": "second chunk"},
@@ -22,25 +22,25 @@ func TestRagSystem(t *testing.T) {
 	}
 
 	t.Cleanup(func() {
-		t.Log("Cleaning up: deleting collection...")
-		err := col.Delete(client)
+		t.Log("Cleaning up: deleting tenant...")
+		err := ten.Delete(client)
 		if err != nil {
-			t.Errorf("Failed to delete collection during cleanup: %v", err)
+			t.Errorf("Failed to delete tenant during cleanup: %v", err)
 		} else {
 			t.Log("Cleanup successful.")
 		}
 	})
 
-	t.Run("creates the collection", func(t *testing.T) {
-		err := col.Create(client)
+	t.Run("creates tenant", func(t *testing.T) {
+		err := ten.Create(client)
 		if err != nil {
-			t.Fatalf("Failed to create collection: %v", err)
+			t.Fatalf("Failed to create tenant: %v", err)
 		}
-		t.Log("Collection creation successful.")
+		t.Log("Tenant creation successful.")
 	})
 
-	t.Run("adds documents to the collection", func(t *testing.T) {
-		err := col.AddDocuments(client)
+	t.Run("adds documents to tenant", func(t *testing.T) {
+		err := ten.AddDocuments(client)
 		if err != nil {
 			t.Fatalf("Failed to add documents: %v", err)
 		}
@@ -48,7 +48,7 @@ func TestRagSystem(t *testing.T) {
 	})
 
 	t.Run("tests Rag pipeline", func(t *testing.T) {
-		history, err := testRagPipeline(col.collectionName)
+		history, err := testRagPipeline(ten.name)
 
 		if err != nil {
 			t.Fatalf("Rag pipeline failed: %v", err)
@@ -62,11 +62,11 @@ func TestRagSystem(t *testing.T) {
 	})
 }
 
-func testRagPipeline(collectionName string) ([]*ChatMessage, error) {
+func testRagPipeline(tenantName string) ([]*ChatMessage, error) {
 	prompt := "What is the secret keyword? Only say the secret keyword."
 	msgHistory := []*ChatMessage{}
 
-	responseHistory, err := CallRagSystem(prompt, msgHistory, collectionName)
+	responseHistory, err := CallRagSystem(prompt, msgHistory, tenantName)
 
 	return responseHistory, err
 }

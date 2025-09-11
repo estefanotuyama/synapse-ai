@@ -14,39 +14,19 @@ import (
 // defines how many embedding retries are allowed
 const MAX_RETRIES int = 3
 
-type Collection struct {
-	collectionName string
-	docs           []map[string]string
+type AgentTenant struct {
+	name string
+	docs []map[string]string
 }
 
-func (c *Collection) Create(client *weaviate.Client) error {
+func (t *AgentTenant) Create(client *weaviate.Client) error {
 	ctx := context.Background()
 
-	collection := &models.Class{
-		Class: c.collectionName,
+	err := client.Schema().TenantsCreator().
+		WithClassName(COLLECTION_NAME).
+		WithTenants(models.Tenant{Name: t.name}).
+		Do(ctx)
 
-		Properties: []*models.Property{
-			{
-				Name:     "content",
-				DataType: []string{"text"},
-			},
-		},
-
-		VectorConfig: map[string]models.VectorConfig{
-			"content_vector": {
-				VectorIndexType: "hnsw",
-				Vectorizer: map[string]interface{}{
-					"text2vec-huggingface": map[string]interface{}{
-						"properties":         []string{"content"},
-						"model":              "sentence-transformers/all-MiniLM-L6-v2",
-						"vectorizeClassName": false,
-					},
-				},
-			},
-		},
-	}
-
-	err := client.Schema().ClassCreator().WithClass(collection).Do(ctx)
 	if err != nil {
 		return err
 	}
@@ -54,61 +34,72 @@ func (c *Collection) Create(client *weaviate.Client) error {
 	return nil
 }
 
-func (c *Collection) AddDocuments(client *weaviate.Client) error {
-
+func (t *AgentTenant) AddDocuments(client *weaviate.Client) error {
 	ctx := context.Background()
-	batcher := client.Batch().ObjectsBatcher()
 
-	for _, doc := range c.docs {
-		batcher.WithObjects(&models.Object{
-			Class: c.collectionName,
-			Properties: map[string]interface{}{
-				"content": doc["content"],
-			},
-		})
-	}
-
-	var err error
-	var batchRes []models.ObjectsGetResponse
-
-	for i := range MAX_RETRIES {
-		batchRes, err = batcher.Do(ctx)
-		if err == nil {
-			break
+	const BATCH_SIZE = 200
+	for start := 0; start < len(t.docs); start += BATCH_SIZE {
+		end := start + BATCH_SIZE
+		if end > len(t.docs) {
+			end = len(t.docs)
 		}
 
-		fmt.Printf("Attempt %d failed. Retrying in 2 seconds... Error: %v\n", i+1, err)
-		time.Sleep(1 * time.Second)
-	}
+		batcher := client.Batch().ObjectsBatcher()
 
-	if err != nil {
-		return fmt.Errorf("batch import failed after %d retries: %w", MAX_RETRIES, err)
-	}
+		for _, doc := range t.docs[start:end] {
+			batcher.WithObjects(&models.Object{
+				Class:  COLLECTION_NAME,
+				Tenant: t.name,
+				Properties: map[string]interface{}{
+					"content": doc["content"],
+				},
+			})
+		}
 
-	// handle object-level errors
-	var allErrors []string
-	for _, res := range batchRes {
-		if res.Result != nil && res.Result.Errors != nil {
-			for _, errItem := range res.Result.Errors.Error {
-				if errItem != nil {
-					allErrors = append(allErrors, errItem.Message)
+		var err error
+		var batchRes []models.ObjectsGetResponse
+
+		for i := range MAX_RETRIES {
+			batchRes, err = batcher.Do(ctx)
+			if err == nil {
+				break
+			}
+
+			fmt.Printf("Attempt %d failed. Retrying in 2 seconds... Error: %v\n", i+1, err)
+			time.Sleep(1 * time.Second)
+		}
+
+		if err != nil {
+			return fmt.Errorf("batch import failed after %d retries: %w", MAX_RETRIES, err)
+		}
+
+		// handle object-level errors
+		var allErrors []string
+		for _, res := range batchRes {
+			if res.Result != nil && res.Result.Errors != nil {
+				for _, errItem := range res.Result.Errors.Error {
+					if errItem != nil {
+						allErrors = append(allErrors, errItem.Message)
+					}
 				}
 			}
 		}
-	}
 
-	if len(allErrors) > 0 {
-		return fmt.Errorf("encountered %d errors during object import: %v", len(allErrors), allErrors)
+		if len(allErrors) > 0 {
+			return fmt.Errorf("encountered %d errors during object import: %v", len(allErrors), allErrors)
+		}
 	}
 
 	return nil
 }
 
-func (c *Collection) Delete(client *weaviate.Client) error {
+func (t *AgentTenant) Delete(client *weaviate.Client) error {
 	ctx := context.Background()
 
-	if err := client.Schema().ClassDeleter().WithClassName(c.collectionName).Do(ctx); err != nil {
-		return fmt.Errorf("Error while deleting collection: %v", err)
+	err := client.Schema().TenantsDeleter().WithTenants(t.name).Do(ctx)
+
+	if err != nil {
+		return fmt.Errorf("Error while deleting tenant: %v", err)
 	}
 	return nil
 }

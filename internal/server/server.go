@@ -15,9 +15,9 @@ type Server struct {
 }
 
 type RAGRequest struct {
-	Prompt         string             `json:"prompt"`
-	MsgHistory     []*rag.ChatMessage `json:"msgHistory"`
-	CollectionName string             `json:"collectionName"`
+	Prompt     string             `json:"prompt"`
+	MsgHistory []*rag.ChatMessage `json:"msgHistory"`
+	TenantName string             `json:"tenantName"`
 }
 
 type LLMResponse struct {
@@ -58,9 +58,9 @@ func (s *Server) ragHandler(w http.ResponseWriter, r *http.Request) {
 
 	userPrompt := req.Prompt
 	history := req.MsgHistory
-	collectionName := req.CollectionName
+	tenantName := req.TenantName
 
-	history, err := rag.CallRagSystem(userPrompt, history, collectionName)
+	history, err := rag.CallRagSystem(userPrompt, history, tenantName)
 
 	if err != nil {
 		log.Printf("LLM call failed: %v", err)
@@ -80,6 +80,15 @@ func (s *Server) ragHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) Run() error {
+
+	log.Printf("Checking for weaviate collection before starting server...")
+
+	err := rag.SetupWeaviateCollection()
+
+	if err != nil {
+		log.Printf("Couldn't start the server. Problem with weaviate: %v", err)
+	}
+
 	log.Printf("Starting Server on %s", s.addr)
 	return http.ListenAndServe(s.addr, s.routes())
 }

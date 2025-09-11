@@ -7,7 +7,7 @@ import (
 	"github.com/weaviate/weaviate-go-client/v5/weaviate/graphql"
 )
 
-func CallRagSystem(userPrompt string, msgHistory []*ChatMessage, collectionName string) ([]*ChatMessage, error) {
+func CallRagSystem(userPrompt string, msgHistory []*ChatMessage, tenantName string) ([]*ChatMessage, error) {
 	weaviateClient, err := ConnectToVectorDB()
 
 	if err != nil {
@@ -20,7 +20,8 @@ func CallRagSystem(userPrompt string, msgHistory []*ChatMessage, collectionName 
 	limit := 8
 
 	q := weaviateClient.GraphQL().Get().
-		WithClassName(collectionName).
+		WithClassName(COLLECTION_NAME).
+		WithTenant(tenantName).
 		WithFields(graphql.Field{Name: "content"}).
 		WithHybrid(weaviateClient.GraphQL().HybridArgumentBuilder().WithQuery(userPrompt)).
 		WithLimit(limit)
